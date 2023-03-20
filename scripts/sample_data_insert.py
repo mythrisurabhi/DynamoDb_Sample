@@ -1,34 +1,17 @@
-import boto3
 from faker import Faker
 import random
 import datetime
-from dynamodb_client import create_dynamodb_client
+from copy import deepcopy
+from resource import create_dynamodb_resource
 
 
 
-# Define the number of entities to add to the table
-
-
-num_users = 5000
-num_orders = 50000
-num_categories = 1000
-num_products = 3000
-num_reviews = 1000
-
-
+# Define the Faker generator
+fake = Faker()
 start_review_id = 1
 start_order_id = 100
 order_status = ['Shipped', 'In process', 'Hold']
 
-users = []
-orders = []
-categories = []
-products = []
-reviews = []
-
-# Define the Faker generator
-fake = Faker()
-client = create_dynamodb_client
 
 def random_date():
     start_date = datetime.date(2010, 1, 1)
@@ -39,87 +22,15 @@ def random_date():
     random_number_of_days = random.randrange(days_between_dates)
     random_date = start_date + datetime.timedelta(days=random_number_of_days)
     return str(random_date)
-# Generate users data
+
+# Generate users
 
 
-def get_users():
-    response = client.query(
-        TableName='orders-users-products',
-        IndexName='GSI2',
-        KeyConditionExpression='#Type = :Type',
-        ExpressionAttributeNames={
-            '#Type': 'Type'
-        },
-        ExpressionAttributeValues={
-            ':Type': {'S': 'USER'}
-        })
-    #print (len(response.get('Items')))
-
-    for item in response.get('Items'):
-        user = {
-            'PK': item['PK']['S'],
-            'SK': item['SK']['S'],
-            'UserName': item['UserName']['S'],
-            'Email': item['Email']['S'],
-            'Address': item['Address']['S'],
-            'CreatedAt': item['CreatedAt']['S'],
-            'Type': item['Type']['S']
-
-        }
-        users.append(user)
-
-
-def get_products():
-    response = client.query(
-        TableName='orders-users-products',
-        IndexName='GSI2',
-        KeyConditionExpression='#Type = :Type',
-        ExpressionAttributeNames={
-            '#Type': 'Type'
-        },
-        ExpressionAttributeValues={
-            ':Type': {'S': 'PRODUCT'}
-        })
-    # print (len(response.get('Items')))
-
-    for item in response.get('Items'):
-        product = {
-            'PK': item['PK']['S'],
-            'SK': item['SK']['S'],
-            'Description': item['Description']['S'],
-            'Type': item['Type']['S'],
-
-        }
-        products.append(product)
-
-
-def get_categories():
-    response = client.query(
-        TableName='orders-users-products',
-        IndexName='GSI2',
-        KeyConditionExpression='#Type = :Type',
-        ExpressionAttributeNames={
-            '#Type': 'Type'
-        },
-        ExpressionAttributeValues={
-            ':Type': {'S': 'CATEGORY'}
-        })
-
-    for item in response.get('Items'):
-        category = {
-            'PK': item['PK']['S'],
-            'SK': item['SK']['S'],
-            'Description': item['Description']['S'],
-            'Type': item['Type']['S'],
-
-        }
-        categories.append(category)
-
-
-def genarate_users():
-    for i in range(num_users):
+def generate_users(no_of_users: int):
+    users = []
+    for i in range(no_of_users):
         user_name = fake.name().replace(' ', '_') + str(random.randint(100, 100000))
-        user = {
+        user_item = {
             'PK': 'USER#' + user_name,
             'SK': 'USER#' + user_name,
             'UserName': user_name,
@@ -129,136 +40,131 @@ def genarate_users():
             'Type': 'USER'
 
         }
-        users.append(user)
-    insert_items(users)
-    print(len(users))
-
-# Define the orders entity
+        users.append(user_item)
+    return users
 
 
-def genarate_orders():
-    if len(categories) == 0:
-        get_categories()
-        if len(categories) == 0:
-            genarate_categories()
-    if len(products) == 0:
-        get_products()
-        if len(products) == 0:
-            genarate_products()
-    if len(users) == 0:
-        get_users()
-        if len(users) == 0:
-            genarate_users()
-    for i in range(num_orders):
-        user_name = random.choice(users)['UserName']
-        order_id = str(start_order_id + i) + random_date()
-        status = random.choice(order_status)
-        created_at = random_date()
-        order = {
-            'PK': 'USER#' + user_name,
-            'SK': '#ORDER#' + order_id,
-            'CreatedAt': created_at,
-            'Orderid': order_id,
-            'Type': 'ORDER',
-            'Status': status,
-            'ProductId': random.choice(products)['Description'],
-            'GSI1PK': '#ORDER',
-            'GSI1SK': created_at
-        }
-        orders.append(order)
-    insert_items(orders)
-    print(len(orders))
+# Generate oders for each user
+def generate_orders(no_of_orders: int, users, products):
+    orders = []
+    user_products = []
+    for user in users:
+        user_deep_copy = deepcopy(user)
+        products_list = []
+        for i in range(no_of_orders):
+            order_id = str(start_order_id + i)
+            status = random.choice(order_status)
+            created_at = random_date()
+            if len(products) > 0:
+                product = random.choice(products)
+            else:
+                product = {'Description': fake.word().upper() + random_date()}
+            products_list.append(product)
+            order_item = {
+                'PK': user['PK'],
+                'SK': '#ORDER#' + order_id,
+                'CreatedAt': created_at,
+                'Orderid': order_id,
+                'Type': 'ORDER',
+                'Status': status,
+                'ProductId': product['Description'],
+                'GSI1PK': '#ORDER',
+                'GSI1SK': created_at
+            }
+            orders.append(order_item)
+        user_product = user_deep_copy
+        user_product['Products'] = products_list
+        user_products.append(user_product)
+    return orders, user_products
 
 
-# Define the categories entity
+# Generate reviews for each user
+def generate_reviews(no_of_reviews: int, user_products):
+    reviews = []
+    for user in user_products:
+        for i in range(no_of_reviews):
+            product = random.choice(user['Products'])
+            review_id = start_review_id + i
+            review_item = {
+                'PK': user['PK'],
+                'SK': 'REVIEW#' + str(review_id + i) + random_date(),
+                'CreatedAt': random_date(),
+                'Type': 'REVIEW',
+                'ProductId': product['Description'],
+                'Description': str(random.randint(2, 5)) + 'stars',
+                'GSI1PK': 'PRODUCT#' + product['Description'],
+                'GSI1SK': 'REVIEW#' + str(review_id + i)
+            }
+            reviews.append(review_item)
+    return reviews
 
 
-def genarate_categories():
-    for i in range(num_categories):
-        category_name = fake.word().upper()+random_date()
-        category = {
+def generate_categories(no_of_categories: int):
+    categories = []
+    for i in range(no_of_categories):
+        category_name = fake.word().upper() + str(random.randint(100, 100000))
+        category_item = {
             'PK': 'CATEGORY#' + category_name,
             'SK': 'CATEGORY#' + category_name,
             'Type': 'CATEGORY',
             'Description': category_name,
         }
-        categories.append(category)
-    insert_items(categories)
+        categories.append(category_item)
+    return categories
 
 
-# Define the products entity
-def genarate_products():
-    if len(categories) == 0:
-        get_categories()
-        if len(categories) == 0:
-            genarate_categories()
-    for i in range(num_products):
-        product_name = fake.word().upper()+random_date()
-        category_name = random.choice(categories)['Description']
-        product = {
-            'PK': 'CATEGORY#' + category_name,
-            'SK': 'PRODUCT#' + product_name,
-            'Type': 'PRODUCT',
-            'Description': product_name,
-        }
-        products.append(product)
-    insert_items(products)
+def generate_products(no_of_products: int, categories):
+    products = []
+    for category in categories:
+        for i in range(no_of_products):
+            product_name = fake.word().upper() + random_date()
+            product_item = {
+                'PK': category['PK'],
+                'SK': 'PRODUCT#' + product_name,
+                'Type': 'PRODUCT',
+                'Description': product_name,
+            }
+            products.append(product_item)
+    return products
 
-# Define the reviews entity
+# Batch write items
+def insert_items(data):
 
-
-def genarate_reviews():
-    if len(products) == 0:
-        get_products()
-        if len(products) == 0:
-            genarate_products()
-    if len(users) == 0:
-        get_users()
-        if len(users) == 0:
-            genarate_users()
-    for i in range(num_reviews):
-        user_name = random.choice(users)['UserName']
-        product_name = random.choice(products)['Description']
-        review_id = start_review_id + i
-        review = {
-            'PK': 'USER#' + user_name,
-            'SK': 'REVIEW#' + str(review_id + i) + random_date(),
-            'CreatedAt': random_date(),
-            'Type': 'REVIEW',
-            'ProductId': product_name,
-            'Description': str(random.randint(2, 5)) + 'stars',
-            'GSI1PK': 'PRODUCT#' + product_name,
-            'GSI1SK': 'REVIEW#' + str(review_id + i)
-        }
-        reviews.append(review)
-    insert_items(reviews)
-
-
-def insert_items(items):
-    dynamodb = boto3.resource("dynamodb", region_name="localhost", endpoint_url="http://localhost:8000/",
-                            aws_access_key_id="gi8vsa", aws_secret_access_key="xl2cta")
+    dynamodb = create_dynamodb_resource()
     table = dynamodb.Table('orders-users-products')
-    # Divide items into batches of 25 (the maximum number of items per batch is 25)
-    batches = [items[i:i+25] for i in range(0, len(items), 25)]
-    with table.batch_writer() as batch:
-        for batch_items in batches:
-            for item in batch_items:
-                try:
-                    batch.put_item(Item=item)
-                except Exception as e:
-                    print(e)
-                    print(item)
-    
-  
+    batch_size = 25
+    batch = []
+    for item in data:
+        batch.append(item)
+        if len(batch) == batch_size:
+            with table.batch_writer() as batch_writer:
+                for item in batch:
+                    batch_writer.put_item(Item=item)
+            batch = []
+    if batch:
+        with table.batch_writer() as batch_writer:
+            for item in batch:
+                batch_writer.put_item(Item=item)
+
 
 # Add the entities to the table
-# entities = users + orders + categories + products + reviews
 if __name__ == "__main__":
-    genarate_users()
-    #get_users()
-    #print(len(users))
-    genarate_categories()
-    genarate_products()
-    genarate_orders()
-    genarate_reviews()
-   # get_products()
+    # Input function to get number of users
+    num_users = int(input("Enter number of users to generate: "))
+    num_orders = int(input("Enter number of orders per user: "))
+    num_reviews = int(input("Enter number of reviews per user: "))
+    num_categories = int(input("Enter number of categories to generate: "))
+    num_products = int(input("Enter number of products per category: "))
+
+    users = generate_users(no_of_users=num_users)
+    categories = generate_categories(no_of_categories=num_categories)
+    products = generate_products(
+        no_of_products=num_products, categories=categories)
+    orders, user_products = generate_orders(no_of_orders=num_orders,
+                                            users=users, products=products)
+    reviews = generate_reviews(
+        no_of_reviews=num_reviews, user_products=user_products)
+    # entities = users + orders + categories + products + reviews
+    data = users + orders + categories + products + reviews
+    insert_items(data=data)
+
