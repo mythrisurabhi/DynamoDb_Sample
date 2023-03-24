@@ -1,6 +1,9 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 from sample_data_insert import generate_users
+
+
+
 
 class TestGenerateUsers(unittest.TestCase):
 
@@ -10,7 +13,7 @@ class TestGenerateUsers(unittest.TestCase):
         mock_fake.name.return_value = 'John Doe'
         mock_fake.email.return_value = 'johndoe@example.com'
         mock_fake.street_address.return_value = '123 Main St'
-        mock_fake.date_this_century.return_value = '2022-01-01'
+        mock_fake.date_this_century.return_value = '2012-01-01'
 
         # Generate 3 mock users
         users = generate_users(3)
