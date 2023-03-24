@@ -2,8 +2,7 @@ from faker import Faker
 import random
 import datetime
 from copy import deepcopy
-from resource import create_dynamodb_resource
-
+from resource_1 import create_dynamodb_resource
 
 
 # Define the Faker generator
@@ -21,7 +20,7 @@ def random_date():
     days_between_dates = time_between_dates.days
     random_number_of_days = random.randrange(days_between_dates)
     random_date = start_date + datetime.timedelta(days=random_number_of_days)
-    return str(random_date)
+    return random_date.strftime('%Y-%m-%d')
 
 # Generate users
 
@@ -45,7 +44,7 @@ def generate_users(no_of_users: int):
 
 
 # Generate oders for each user
-def generate_orders(no_of_orders: int, users, products):
+def generate_orders(no_of_orders: int, users: list, products: list):
     orders = []
     user_products = []
     for user in users:
@@ -128,6 +127,8 @@ def generate_products(no_of_products: int, categories):
     return products
 
 # Batch write items
+
+
 def insert_items(data):
 
     dynamodb = create_dynamodb_resource()
@@ -157,6 +158,7 @@ if __name__ == "__main__":
     num_products = int(input("Enter number of products per category: "))
 
     users = generate_users(no_of_users=num_users)
+    print(users)
     categories = generate_categories(no_of_categories=num_categories)
     products = generate_products(
         no_of_products=num_products, categories=categories)
@@ -167,4 +169,3 @@ if __name__ == "__main__":
     # entities = users + orders + categories + products + reviews
     data = users + orders + categories + products + reviews
     insert_items(data=data)
-
