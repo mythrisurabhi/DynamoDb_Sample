@@ -158,7 +158,6 @@ if __name__ == "__main__":
     num_products = int(input("Enter number of products per category: "))
 
     users = generate_users(no_of_users=num_users)
-    print(users)
     categories = generate_categories(no_of_categories=num_categories)
     products = generate_products(
         no_of_products=num_products, categories=categories)

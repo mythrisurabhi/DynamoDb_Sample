@@ -16,7 +16,7 @@ class TestGenerateReviews(unittest.TestCase):
     def test_generate_reviews(self, mock_random_date, mock_randint, mock_choice):
         # Set up mock values
         mock_randint.return_value = 3 # Mock random integer to always return 3
-        mock_random_date.return_value = '2012-01-01'# Mock random date to always return a fixed date
+        mock_random_date.return_value = '2012-01-01'
         mock_choice.side_effect = first_item  # Mock random.choice to always return the first item in the list
 
         # Set up test data
@@ -34,6 +34,7 @@ class TestGenerateReviews(unittest.TestCase):
         # Check the result
         # expected total of 4 reviews (2 per user)
         self.assertEqual(len(result), 4)
+        
         for review in result:
             self.assertIn('PK', review)
             self.assertIn('SK', review)

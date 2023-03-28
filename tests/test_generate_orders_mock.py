@@ -32,7 +32,7 @@ products = [
         'Description': 'Product 3'
     }
 ]
-order_status = ['Pending1', 'Shipped1', 'Delivered1']
+order_status = ['Pending', 'Shipped', 'Delivered']
 
 
 def first_item(items):

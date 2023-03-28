@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import Mock, patch
 from sample_data_insert import generate_categories
 
-class TestGenerateUsers(unittest.TestCase):
+class TestGenerateCategories(unittest.TestCase):
 
     @patch('sample_data_insert.fake')
     def test_generate_category(self, mock_fake):

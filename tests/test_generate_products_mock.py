@@ -16,7 +16,6 @@ class TestGenerateProducts(unittest.TestCase):
         categories = [{'PK': 'CATEGORY#1'}]
         num_products = 5
         products = generate_products(num_products, categories)
-        print(products)
         self.assertEqual(len(products), len(categories) * num_products)
     
     # Test case 3: Test if the generated products have the expected attributes

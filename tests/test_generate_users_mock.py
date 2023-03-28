@@ -17,8 +17,6 @@ class TestGenerateUsers(unittest.TestCase):
 
         # Generate 3 mock users
         users = generate_users(3)
-        print(users)
-
         # Assert that the number of users generated is equal to 3
         self.assertEqual(len(users), 3)
         
