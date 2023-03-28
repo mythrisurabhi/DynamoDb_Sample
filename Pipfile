@@ -1,0 +1,22 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+boto3 = "*"
+faker = "*"
+
+
+
+[requires]
+python_version = "3.11"
+
+
+[scripts]
+tests = "python -m unittest"
+local_tests = "env TEST_ENV=local python -m unittest"
+
+
+
+
